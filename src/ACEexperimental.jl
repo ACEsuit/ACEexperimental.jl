@@ -1,5 +1,10 @@
 module ACEexperimental
 
-# Write your package code here.
+using ACE, JuLIP
+
+
+include("combinations.jl")
+@reexport using ACEexperimental.Combinations
+
 
 end
