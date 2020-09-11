@@ -1,6 +1,6 @@
 module ACEexperimental
 
-using ACE, JuLIP
+using ACE, JuLIP, Reexport
 
 
 include("combinations.jl")
