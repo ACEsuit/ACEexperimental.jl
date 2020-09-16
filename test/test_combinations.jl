@@ -3,7 +3,7 @@
 @testset "Combinations" begin
 #---
 
-using ACE, JuLIP, Test, ForwardDiff
+using ACE, JuLIP, Test, ForwardDiff, LinearAlgebra
 using ACEexperimental
 using ACEexperimental.Combinations: get_params, set_params!
 using JuLIP.Potentials: evaluate, evaluate_d
@@ -12,7 +12,7 @@ using JuLIP.Potentials: evaluate, evaluate_d
 #---
 
 basis = ACE.Utils.ace_basis(; species = :W, N = 4, maxdeg = 6)
-V = FitCombiPotential(basis, ρ -> ρ[1]+sqrt(ρ[2]), 2)
+V = FitCombiPotential(basis, ρ -> ρ[1]+ ρ[2]^2, 2)
 
 #--- parameter test s
 p1 = V.params

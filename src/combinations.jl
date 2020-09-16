@@ -25,7 +25,7 @@ export FitCombiPotential,
 ```math
 \begin{aligned}
    E_i &= F(\rho_1, \dots, \rho_P), \\
-   \rho_p &= \sum \theta_{pk} B_k
+   \rho_p &= \sum_k \theta_{pk} B_k
 \end{aligned}
 where $$B_k$$ are the basis functions and $$\theta_{pk}$$ the parameters.
 ```
@@ -37,9 +37,9 @@ where $$B_k$$ are the basis functions and $$\theta_{pk}$$ the parameters.
 
 It is assumed that the output of F is also `::T`
 """
-mutable struct FitCombiPotential{T, TF, NZ} <: SitePotential
+mutable struct FitCombiPotential{T, TP, TF, NZ} <: SitePotential
    basis::RPIBasis{T}
-   params::NTuple{NZ, Matrix{T}}
+   params::NTuple{NZ, Matrix{TP}}
    F::TF
 end
 
@@ -68,16 +68,28 @@ get_params(V::FitCombiPotential) = vcat(vec.(V.params)...)
 
 function set_params!(V::FitCombiPotential, θ)
    idx = 0
+   len = length(V.params[1])
    for iz = 1:numz(V)
-      V.params[iz][:] .= θ[(idx+1):(idx+length(V.params[iz]))]
+      V.params[iz][:] .= θ[(idx+1):(idx+len)]
+      idx += len
    end
    return V
 end
 
+function set_params(V::FitCombiPotential, p::Vector{TP}) where {TP}
+   new_params = ntuple( iz -> zeros(TP, (num_features(V), length(V.basis, iz))), numz(V) )
+   Vnew = FitCombiPotential(V.basis, new_params, V.F)
+   idx = 0
+   len = length(Vnew.params[1])
+   for iz = 1:numz(V)
+      Vnew.params[iz][:] .= p[(idx+1):(idx+len)]
+      idx += len
+   end
+   return Vnew
+end
 
 
 # -------------- Evaluation Code
-
 
 
 function evaluate!(tmp, V::FitCombiPotential,
@@ -117,6 +129,12 @@ function evaluate_d!(dEs, tmpd, V::FitCombiPotential,
    dEi = (UniformScaling.(c) * dB_z0)[:]
    return dEi
 end
+
+# --------------- Parameter Gradient
+
+
+
+
 
 
 
