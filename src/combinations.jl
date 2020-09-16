@@ -48,7 +48,7 @@ zlist(V::FitCombiPotential) = zlist(V.basis)
 # i2z(V::FitCombiPotential, i) = i2z(V.basis, i)
 # numz(V::FitCombiPotential) = length(zlist(V.basis))
 
-fltype(V::FitCombiPotential{T}) where {T} = T
+fltype(V::FitCombiPotential{T, TP}) where {T, TP} = typeof( one(T) * one(TP) )
 
 cutoff(V::FitCombiPotential) = cutoff(V.basis)
 
@@ -62,7 +62,7 @@ end
 # -------------- Parameter management ...
 
 
-num_features(V::FitCombiPotential) = size(V.params, 1)
+num_features(V::FitCombiPotential) = size(V.params[1], 1)
 
 get_params(V::FitCombiPotential) = vcat(vec.(V.params)...)
 
@@ -109,10 +109,17 @@ function evaluate!(tmp, V::FitCombiPotential,
 end
 
 
+alloc_temp_d(V::FitCombiPotential, N::Integer) =
+      (dV = zeros(JVec{fltype(V)}, N),
+        R = zeros(JVecF, N),
+        Z = zeros(AtomicNumber, N), )
+
+
 function evaluate_d!(dEs, tmpd, V::FitCombiPotential,
                    Rs::AbstractVector{JVec{T}},
                    Zs::AbstractVector{<:AtomicNumber},
                    z0::AtomicNumber) where {T}
+   @show eltype(dEs), fltype(V)
    iz0 = z2i(V, z0)
    # Evaluate the densities (cf evaluate! for comments)
    B = evaluate(V.basis, Rs, Zs, z0)
@@ -127,7 +134,10 @@ function evaluate_d!(dEs, tmpd, V::FitCombiPotential,
    dB = evaluate_d(V.basis, Rs, Zs, z0)
    dB_z0 = @view dB[V.basis.Bz0inds[iz0], :]
    dEi = (UniformScaling.(c) * dB_z0)[:]
-   return dEi
+   for n = 1:length(dEi)
+      dEs[n] = dEi[n]
+   end
+   return dEs
 end
 
 # --------------- Parameter Gradient

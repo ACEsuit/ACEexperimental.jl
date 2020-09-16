@@ -41,36 +41,10 @@ dv_man = (UniformScaling.(c) * dB )[:]
 dv = evaluate_d(V, Rs, Zs, z0)
 println(@test(dv_man ≈ dv))
 
-# dv_lin = (V.params[1] * dB)[:]
-# dv_lin ≈ dv
-
 #--- Finite different test
 
 at = rattle!( bulk(:W, cubic=true, pbc = false) * 2, 0.1 )
-JuLIP.Testing.fdtest(V, at)
-
-#---
-
-U = rand(JVecF, length(Rs))
-dB_dU = [ dot(dB[n, :][:], U) for n = 1:length(B) ]
-for h in 0.1.^(2:10)
-   Bh = evaluate(basis, Rs+h * U, Zs, z0)
-   dBh_dU = (Bh - B) / h
-   @show norm(dB_dU - dBh_dU, Inf)
-end
-
-#---
-
-U = rand(JVecF, length(Rs))
-v = evaluate(V, Rs, Zs, z0)
-dV_dU = dot(dv, U)
-for h in 0.1.^(2:10)
-   Vh = evaluate(V, Rs+h * U, Zs, z0)
-   dVh_dU = (Vh - v) / h
-   @show norm(dV_dU - dVh_dU, Inf)
-end
-
-#---
+println(@test JuLIP.Testing.fdtest(V, at))
 
 
 end
