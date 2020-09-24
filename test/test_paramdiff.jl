@@ -23,4 +23,7 @@ forces(V, at)
 
 p0 = get_params(V)
 Efun = p -> energy(set_params(V, p), at)
+print("bew")
+print(Efun(p0))
+
 ForwardDiff.gradient(Efun, p0)
