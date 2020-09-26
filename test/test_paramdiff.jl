@@ -22,6 +22,7 @@ at = rattle!( bulk(:W, cubic=true, pbc = false) * 2, 0.1 )
 energy(V, at)
 forces(V, at)
 
+#small change
 p0 = get_params(V)
 # write the energy  as a vector containing a single value
 Efun = p -> [ energy(set_params(V, p), at) ]
