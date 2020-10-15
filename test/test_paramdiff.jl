@@ -9,7 +9,7 @@ using JuLIP.Potentials: evaluate, evaluate_d
 using ForwardDiff
 using ForwardDiff: Dual
 using Plots
-
+@show pwd()
 
 #---
 #reference model
@@ -40,11 +40,13 @@ train = [rattle!( bulk(:W, cubic=true, pbc = false) * 2, 0.1 ) for _ = 1:N_train
 w_RE = 1
 w_RF = 1
 #quadratic cost function
-J(V,train) = sum([w_RE^2 * abs(energy(V,R) - energy(pot, R))^2 + w_RF^2 * norm(forces(V, R) - forces(pot, R))^2 for R in train])
+#J(V,train) = sum([w_RE^2 * abs(energy(V,R) - energy(pot, R))^2 + w_RF^2 * norm(forces(V, R) - forces(pot, R))^2 for R in train])
+J(V,train) = sum([w_RE^2 * abs(energy(V,R) - energy(pot, R))^2 for R in train])
 
 @show J(V, train)
 
 p0 = get_params(V)
+@show p0
 # write the energy  as a vector containing a single value
 Efun = p -> [ energy(set_params(V, p), at) ]
 
@@ -52,10 +54,23 @@ Efun = p -> [ energy(set_params(V, p), at) ]
 ForwardDiff.jacobian(Efun, p0)
 
 # write forces (vector of vectors) as a single long vector
-Ffun = p -> mat(forces(set_params(V, p), at))[:]
-Ffun(p0)
-ForwardDiff.jacobian(Ffun, p0)
+#Ffun = p -> mat(forces(set_params(V, p), at))[:]
+#Ffun(p0)
+#ForwardDiff.jacobian(Ffun, p0)
 
 #now the cost function
 Jfun = p -> [J(set_params(V, p), train) ]
-ForwardDiff.jacobian(Jfun, p0)
+Jac = ForwardDiff.jacobian(Jfun, p0)
+p = p0
+while norm(Jac) > 0.01
+   @show "2"
+   p = p - transpose(Jac)*Jac \ transpose(Jac)*J(set_params!(V,p),train) 
+   @show "2"
+   Jac = ForwardDiff.jacobian(Jfun, p)
+   
+   hmj
+end 
+
+@show "end"
+
+  
