@@ -196,9 +196,8 @@ Ffun = ρ -> ρ[1] + exp(-ρ[2]^2)
 #if so how are we going to know this before hand
 #and we need to fix the code with it
 V = FitCombiPotential(basis, Ffun, 2)
-@show V
 set_params!(V, rand(length(get_params(V))))
-
+@show length(get_params(V))
 #need to properly incorporate forces and decide what to do with the weights
 #weights
 w_RE = 1
@@ -218,13 +217,23 @@ L(θ) = sum([w_RE^2 * abs(energy(set_params!(V,θ),t.at) - t.E)^2 + w_RF^2 * nor
 
 using Flux
 
-W1 = rand(3, 5)
-b1 = rand(3)
-layer1(x) = W1 * x .+ b1
+#R^n -> R^n
+W1 = rand()
+b1 = rand()
+layer1(ρ) = W1 .* ρ .+ b1
+#R^n -> R^n
+W2 = rand()
+b2 = rand()
+layer2(ρ) = W2 .* ρ .+ b2
+#R^n -> R
+layer3(ρ) = sum(ρ)
 
-W2 = rand(2, 3)
-b2 = rand(2)
-layer2(x) = W2 * x .+ b2
+neurNet = ρ -> layer3(layer2(layer1(ρ)))
 
-Ffun(x) = layer2(σ.(layer1(x)))
-V = FitCombiPotential(basis, Ffun, 2)
+V = FitCombiPotential(basis, neurNet, 2)
+set_params!(V, rand(length(get_params(V))))
+@show energy(V,train[1].at)
+L(θ) = sum([w_RE^2 * abs(energy(set_params!(V,θ),t.at) - t.E)^2 + w_RF^2 * norm(forces(set_params!(V,θ), t.at) - t.F)^2 for t in train])
+L(get_params(V))
+
+
