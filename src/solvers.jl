@@ -101,7 +101,7 @@ Adam
 Adam algorithm implementation
 """
 
-function adam(loss, theta_not; alpha::Float64=0.001 , beta1::Float64=0.9 , beta2::Float64=0.999 , epsilon::Float64=1/10^8 , termination::Real = 1/10^4, iterations::Int=1000000)
+function adam(loss, theta_not; alpha::Float64=0.001 , beta1::Float64=0.9 , beta2::Float64=0.999 , epsilon::Float64=1/10^8 , termination::Real = 1/10^4, iterations::Int=10000)
     grad_loss = theta -> ForwardDiff.gradient(loss, theta);
     m = zeros(length(theta_not))
     v = 0
@@ -120,6 +120,7 @@ function adam(loss, theta_not; alpha::Float64=0.001 , beta1::Float64=0.9 , beta2
 
         push!(nabla_f_normed, norm(grad_loss(theta), Inf))
         if(t > iterations)
+            @show norm(grad_loss(theta), Inf)
             print("max iterations reached")
             break
         end

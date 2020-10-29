@@ -75,26 +75,45 @@ function rand_config(V; rattle = 0.2, nrepeat = 3)
  train = trainset(LJPot, 10)
 
  L1,c = lls_basis_prob(train)
- @show L1(c)
- @show L1(c*1.1)
-
 
  #R^n -> R^n
-W1 = rand()
-b1 = rand()
+W1 = 2#rand()
+b1 = 1#rand()
 layer1(ρ) = W1 .* ρ .+ b1
 #R^n -> R^n
-W2 = rand()
-b2 = rand()
+W2 = 1#rand()
+b2 = 0.5#rand()
 layer2(ρ) = W2 .* ρ .+ b2
 #R^n -> R
 layer3(ρ) = sum(ρ)
 
 neurNet = ρ -> layer3(layer2(layer1(ρ)))
 
- L2, V = combinations_prob(train, neurNet)
+ L2, V2 = combinations_prob(train, ρ -> ρ[1] + exp(-ρ[2]^2))
+ L3, V3 = combinations_prob(train, neurNet)
+
+Iter = 10000
+
+ norm_grad1, θ1 = steepestgradient(L1, 1.3*c, iterations=Iter , param_sd= 1/10^4 , h=0.01 , quad = true , initstep = true , initminimizer = true , termination = 1/10^4)
+ norm_grad2, θ2 = steepestgradient(L2, get_params(V2), iterations=Iter , param_sd= 1/10^4 , h=0.01 , quad = true , initstep = true , initminimizer = true , termination = 1/10^4)
+ norm_grad3, θ3 = steepestgradient(L3, get_params(V3), iterations=Iter , param_sd= 1/10^4 , h=0.01 , quad = true , initstep = true , initminimizer = true , termination = 1/10^4)
+
+ Adam_norm_grad1, Aθ1 = adam(L1, 1.3*c,iterations=Iter)
+ Adam_norm_grad2, Aθ2 = adam(L2, get_params(V2),iterations=Iter)
+ Adam_norm_grad3, Aθ3 = adam(L3, get_params(V3),iterations=Iter)
+
+ cd("C:/Users/andre/Google Drive/documents/UBC/research/semester 1/benchmark problems and solvers/testing SD and adam")
+
+ plot(norm_grad1, yaxis=:log, xlab="iterations", ylab="norm_inf( nabla f(x) )", label="sd", title="lls")
+ plot!(Adam_norm_grad1, label="adam")
+ savefig("Adam vs SD LLS")
+
+ plot(norm_grad2, yaxis=:log, xlab="iterations", ylab="norm_inf( nabla f(x) )", label="sd", title="ρ[1] + exp(-ρ[2]^2)")
+ plot!(Adam_norm_grad2, label="adam")
+ savefig("Adam vs SD combi")
+
+ plot(norm_grad3, yaxis=:log, xlab="iterations", ylab="norm_inf( nabla f(x) )", label="sd", title="composition 2 layer")
+ plot!(Adam_norm_grad3, label="adam")
+ savefig("Adam vs SD compo")
 
  
- norm_grad, θ = steepestgradient(L2, get_params(V), iterations=10 , param_sd= 1/10^4 , h=0.01 , quad = true , initstep = true , initminimizer = true , termination = 1/10^4)
-
- plot(norm_grad, yaxis=:log, xlab="iterations", ylab="norm_inf( nabla f(x) )", label="SD t, t, t, P1, lj")
