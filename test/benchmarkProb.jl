@@ -6,6 +6,8 @@ using ForwardDiff
 using ForwardDiff: Dual
 using Plots
 
+using ACEexperimental.Solvers: steepestgradient, adam
+
 @show pwd()
 @show "1"
 
@@ -30,6 +32,7 @@ MorsePot = let A = 1, r0 = r0 #optimize for A?
 
 #choose a potential
 pot = LJPot
+
 
 
 #---
@@ -66,7 +69,6 @@ function rand_config(V; rattle = 0.2, nrepeat = 3)
     return rattle!(at, rattle)
  end
 
- #decide if we want or need E-energy(v0,at)
  function trainset(Vref, Ntrain; kwargs...)
     train = []
     for n = 1:Ntrain
@@ -80,12 +82,7 @@ function rand_config(V; rattle = 0.2, nrepeat = 3)
     return train
  end
 
- train = trainset(pot, 1000)
-
-@show length(train)
-at,e,f = train[1]
-@show e
-@show train[1][2]
+ train = trainset(pot, 10)
 
 @show "prelims"
 
@@ -158,18 +155,21 @@ function lsq(train, basis; verbose=true, wE = 1.0, wF = 1.0)
  end
 
 #choose a basis
-basis = get_2b_basis(:W; maxdeg = 14, rcut = 6.0)
+basis = get_2b_basis(:W; maxdeg = 8, rcut = 6.0)
 
 #Ac = y problem
 A,c,y = lsq(train, basis, wE=30.0, wF=1.0)
 
 #what will be our theta not, do we even need one?
-L(θ) =  norm(A * θ - y) / norm(y)
+L1(θ) =  norm(A * θ - y) / norm(y)
 
-θ_0 = zeros(14)
-@show L(θ_0)
+θ_0 = zeros(8)
+@show L1(c)
 
 @show "1st prob"
+
+
+
 
 #---
 #2nd problem
@@ -195,27 +195,34 @@ Ffun = ρ -> ρ[1] + exp(-ρ[2]^2)
 #the 2 here is it the number of parameters?
 #if so how are we going to know this before hand
 #and we need to fix the code with it
-V = FitCombiPotential(basis, Ffun, 2)
-set_params!(V, rand(length(get_params(V))))
-@show length(get_params(V))
+V2 = FitCombiPotential(basis, Ffun, 2)
+set_params!(V2, rand(length(get_params(V2))))
+@show length(get_params(V2))
 #need to properly incorporate forces and decide what to do with the weights
 #weights
 w_RE = 1
 w_RF = 1
 #quadratic cost function
 #J(V,train) = sum([w_RE^2 * abs(energy(V,R) - energy(pot, R))^2 + w_RF^2 * norm(forces(V, R) - forces(pot, R))^2 for R in1 train])
-θ_0 = get_params(V)
-
+θ_0 = get_params(V2)
+N_train = 4
+train = [rattle!( bulk(:W, cubic=true, pbc = false) * 2, 0.1 ) for _ = 1:N_train ]
 #fix the energy, it was already calculated. instead of energy(pot, t.at) do t.E y t.F for force
-L(θ) = sum([w_RE^2 * abs(energy(set_params!(V,θ),t.at) - t.E)^2 + w_RF^2 * norm(forces(set_params!(V,θ), t.at) - t.F)^2 for t in train])
+#L2(θ) = sum([w_RE^2 * abs(energy(set_params!(V2,θ),t.at) - t.E)^2 + w_RF^2 * norm(forces(set_params!(V2,θ), t.at) - t.F)^2 for t in train])
+L2(θ) = sum([w_RE^2 * abs(energy(set_params(V2,θ),t) - energy(pot, t))^2 for t in train])
 #@show L(θ_0)
-@show "2nd prog"
 
+J(V,train) = sum([w_RE^2 * abs(energy(V2,R) - energy(pot, R))^2 for R in train])
+Jfun = p -> [J(set_params(V2, p), train) ]
+
+@show "2nd prog"
+@show ForwardDiff.jacobian(Jfun, θ_0)
+@show "sone"
 #---
 #3rd problem
 #here we draft the problem where V is the composition of other functions
 
-using Flux
+#using Flux not even using it
 
 #R^n -> R^n
 W1 = rand()
@@ -234,6 +241,40 @@ V = FitCombiPotential(basis, neurNet, 2)
 set_params!(V, rand(length(get_params(V))))
 @show energy(V,train[1].at)
 L(θ) = sum([w_RE^2 * abs(energy(set_params!(V,θ),t.at) - t.E)^2 + w_RF^2 * norm(forces(set_params!(V,θ), t.at) - t.F)^2 for t in train])
-L(get_params(V))
+#L(get_params(V))
+
+
+
+
+
+
+@show c
+#norm_grad, θ = adam(L1,c .* 1.6 ,alpha = 0.01, iterations = 100)
+norm_grad, θ = steepestgradient(L2, get_params(V2), iterations=10000 , param_sd= 1/10^4 , h=0.01 , quad = true , initstep = true , initminimizer = true , termination = 1/10^4)
+
+@show θ[length(θ)]
+#rp = range(0.5, 2.5, length=100)
+#plot(rp, pot.(rp), yaxis = ([-2.0, 2.0],), label = "", 
+#     title = "Lennard-Jones potential with cutoff", size = (400,250))
+plot(norm_grad, yaxis=:log)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
